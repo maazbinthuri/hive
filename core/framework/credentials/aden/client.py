@@ -149,13 +149,30 @@ class AdenCredentialResponse:
             expires_at = datetime.fromisoformat(data["expires_at"].replace("Z", "+00:00"))
 
         return cls(
-            integration_id=integration_id or data.get("alias", data.get("provider", "")),
-            integration_type=data.get("provider", ""),
-            access_token=data["access_token"],
-            token_type=data.get("token_type", "Bearer"),
+            integration_id=(
+                data.get("integration_id")
+                or data.get("integrationId")
+                or data.get("id")
+                or integration_id
+                or ""
+            ),
+            integration_type=(
+                data.get("integration_type")
+                or data.get("integrationType")
+                or data.get("provider")
+                or ""
+            ),
+            access_token=(
+                data.get("access_token")
+                or data.get("accessToken")
+                or data.get("token")
+                or ""
+            ),
+            token_type=data.get("token_type") or data.get("tokenType") or "Bearer",
             expires_at=expires_at,
             scopes=data.get("scopes", []),
-            metadata={"email": data.get("email")} if data.get("email") else {},
+            metadata=data.get("metadata")
+            or ({"email": data.get("email")} if data.get("email") else {}),
         )
 
 
@@ -281,7 +298,9 @@ class AdenCredentialClient:
                     if data.get("error") == "refresh_failed":
                         raise AdenRefreshError(
                             data.get("message", "Token refresh failed"),
-                            requires_reauthorization=data.get("requires_reauthorization", False),
+                            requires_reauthorization=data.get(
+                                "requires_reauthorization", False
+                            ),
                             reauthorization_url=data.get("reauthorization_url"),
                         )
 
@@ -357,7 +376,9 @@ class AdenCredentialClient:
             AdenAuthenticationError: If API key is invalid.
             AdenRateLimitError: If rate limited.
         """
-        response = self._request_with_retry("POST", f"/v1/credentials/{integration_id}/refresh")
+        response = self._request_with_retry(
+            "POST", f"/v1/credentials/{integration_id}/refresh"
+        )
         data = response.json()
         return AdenCredentialResponse.from_dict(data, integration_id=integration_id)
 
@@ -374,7 +395,9 @@ class AdenCredentialClient:
         """
         response = self._request_with_retry("GET", "/v1/credentials")
         data = response.json()
-        return [AdenIntegrationInfo.from_dict(item) for item in data.get("integrations", [])]
+        return [
+            AdenIntegrationInfo.from_dict(item) for item in data.get("integrations", [])
+        ]
 
     def validate_token(self, integration_id: str) -> dict[str, Any]:
         """
@@ -391,7 +414,9 @@ class AdenCredentialClient:
             AdenNotFoundError: If integration not found.
             AdenAuthenticationError: If API key is invalid.
         """
-        response = self._request_with_retry("GET", f"/v1/credentials/{integration_id}/validate")
+        response = self._request_with_retry(
+            "GET", f"/v1/credentials/{integration_id}/validate"
+        )
         return response.json()
 
     def report_usage(
